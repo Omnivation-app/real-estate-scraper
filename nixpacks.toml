@@ -1,10 +1,10 @@
 [build]
-# Force Python buildpack
+# Force Python buildpack - ignore Dockerfile
 pkgs = ["python311", "postgresql"]
 
 [phases.setup]
-# Install Python dependencies
-cmds = ["pip install -r requirements.txt"]
+# Install Python dependencies from root
+cmds = ["pip install --no-cache-dir -r requirements.txt"]
 
 [phases.build]
 # No build phase needed for FastAPI
