@@ -86,3 +86,4 @@ L'application sera accessible sur `http://localhost:5173` (front-end) et l'API s
 - `backend/app/scraper/parser.py` — Extraction des données HTML
 - `frontend/src/pages/Search.tsx` — Interface de recherche
 - `docker-compose.yml` — Configuration des services
+# Force rebuild - Sun Feb 22 09:06:35 EST 2026
