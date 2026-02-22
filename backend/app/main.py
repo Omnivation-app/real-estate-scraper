@@ -7,6 +7,7 @@ from datetime import datetime
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.database import get_db, init_db
 from app.models import Base
@@ -74,7 +75,7 @@ def health_check(db: Session = Depends(get_db)):
     """Vérifier la santé de l'API."""
     try:
         # Tester la connexion à la base de données
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         database_status = "healthy"
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
