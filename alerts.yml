@@ -1,0 +1,194 @@
+groups:
+  - name: real_estate_scraper
+    interval: 30s
+    rules:
+      # === API Alerts ===
+      
+      # Alerte : Taux d'erreur élevé (> 5%)
+      - alert: HighErrorRate
+        expr: rate(requests_total{status=~"5.."}[5m]) / rate(requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "Taux d'erreur API élevé"
+          description: "Le taux d'erreur est {{ $value | humanizePercentage }} (seuil: 5%)"
+          dashboard: "http://localhost:3000/d/api-dashboard"
+
+      # Alerte : Temps de réponse lent (P95 > 1s)
+      - alert: SlowResponseTime
+        expr: histogram_quantile(0.95, rate(request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "Temps de réponse API lent"
+          description: "Le temps de réponse P95 est {{ $value | humanizeDuration }} (seuil: 1s)"
+
+      # Alerte : Requêtes actives élevées
+      - alert: HighActiveRequests
+        expr: active_requests > 100
+        for: 2m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "Nombre de requêtes actives élevé"
+          description: "{{ $value }} requêtes actives (seuil: 100)"
+
+      # === Scraping Alerts ===
+
+      # Alerte : Scraping échoué
+      - alert: ScrapingFailed
+        expr: rate(listings_scraped_total[1h]) == 0
+        for: 1h
+        labels:
+          severity: critical
+          component: scraper
+        annotations:
+          summary: "Scraping échoué"
+          description: "Aucune annonce n'a été scrapée dans la dernière heure"
+
+      # Alerte : Taux d'erreur de scraping élevé
+      - alert: HighScrapingErrorRate
+        expr: rate(errors_total{type="scraping"}[5m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          component: scraper
+        annotations:
+          summary: "Taux d'erreur de scraping élevé"
+          description: "Le taux d'erreur de scraping est {{ $value | humanizePercentage }}"
+
+      # Alerte : Durée de scraping longue
+      - alert: LongScrapingDuration
+        expr: histogram_quantile(0.95, rate(scraping_duration_seconds_bucket[5m])) > 300
+        for: 5m
+        labels:
+          severity: warning
+          component: scraper
+        annotations:
+          summary: "Durée de scraping longue"
+          description: "La durée P95 est {{ $value | humanizeDuration }} (seuil: 5m)"
+
+      # === Database Alerts ===
+
+      # Alerte : Connexions actives élevées
+      - alert: HighDatabaseConnections
+        expr: database_connections > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Nombre de connexions DB élevé"
+          description: "{{ $value }} connexions actives (seuil: 80)"
+
+      # Alerte : Requêtes lentes
+      - alert: SlowDatabaseQueries
+        expr: histogram_quantile(0.95, rate(request_duration_seconds_bucket{endpoint=~"/api/.*"}[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Requêtes DB lentes"
+          description: "La durée P95 est {{ $value | humanizeDuration }} (seuil: 2s)"
+
+      # === System Alerts ===
+
+      # Alerte : Utilisation mémoire élevée
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes > 1000000000
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "Utilisation mémoire élevée"
+          description: "Mémoire utilisée : {{ $value | humanize }}B (seuil: 1GB)"
+
+      # Alerte : Utilisation CPU élevée
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "Utilisation CPU élevée"
+          description: "CPU utilisé : {{ $value | humanizePercentage }}"
+
+      # Alerte : Espace disque faible
+      - alert: LowDiskSpace
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes < 0.1
+        for: 5m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Espace disque faible"
+          description: "Espace disponible : {{ $value | humanizePercentage }}"
+
+      # === Application Alerts ===
+
+      # Alerte : Application indisponible
+      - alert: ApplicationDown
+        expr: up{job="real-estate-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: application
+        annotations:
+          summary: "Application indisponible"
+          description: "L'application n'a pas répondu aux dernières {{ $value }} minutes"
+
+      # Alerte : Uptime faible
+      - alert: LowUptime
+        expr: (time() - process_start_time_seconds) / 3600 < 1
+        for: 5m
+        labels:
+          severity: warning
+          component: application
+        annotations:
+          summary: "Application redémarrée récemment"
+          description: "Uptime : {{ $value | humanizeDuration }}"
+
+      # === Cache Alerts ===
+
+      # Alerte : Taux de hit du cache faible
+      - alert: LowCacheHitRate
+        expr: cache_hits / (cache_hits + cache_misses) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Taux de hit du cache faible"
+          description: "Taux de hit : {{ $value | humanizePercentage }} (seuil: 50%)"
+
+      # === Notification Alerts ===
+
+      # Alerte : Erreurs d'envoi d'email
+      - alert: EmailSendingErrors
+        expr: rate(errors_total{type="email"}[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: notifications
+        annotations:
+          summary: "Erreurs d'envoi d'email"
+          description: "Taux d'erreur : {{ $value | humanizePercentage }}"
+
+      # Alerte : Erreurs d'envoi de SMS
+      - alert: SMSSendingErrors
+        expr: rate(errors_total{type="sms"}[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: notifications
+        annotations:
+          summary: "Erreurs d'envoi de SMS"
+          description: "Taux d'erreur : {{ $value | humanizePercentage }}"
